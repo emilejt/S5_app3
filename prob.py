@@ -45,9 +45,42 @@ def get_frequencies(signal, sample_rate, sinus_count):
     print("Frequencies:", sinus_freqs)
     print("Amplitudes:", sinus_amplitudes)
     print("Phases:", sinus_phases)
-    return sinus_amplitudes, sinus_phases, fundamental
+    return sinus_freqs, sinus_amplitudes, sinus_phases, fundamental
 
 
+def reproduce_signal(frequencies, amplitudes, phases, duration, sample_rate):
+    t = np.linespace(0,duration, int(sample_rate*duration))
+
+    reproduced_signal = np.zeros_like(t)
+
+    for i in range(len(frequencies)):
+        reproduced_signal += amplitudes[i] * np.sin(2*np.pi*frequencies[i]*t + phases[i])
+
+    return reproduced_signal
+
+
+def get_fir_N(cutoff):
+    gain = np.power(10, -3 / 20)
+
+    H0 = 1
+    max_order = 1000
+
+    exp_terms = np.exp(-1j * cutoff * np.arange(max_order))
+    h_gains = []
+
+    for N in range(1, max_order):
+        a = H0 / N
+
+        current_gain = np.sum(exp_terms[:N])
+        h_gains.append(np.abs(a * current_gain))
+        if np.abs(a * current_gain) <= gain:
+            print(f"Lowpass Filter Order: {N}")
+            return N
+
+
+cutoff = np.pi/1000
 sample_rate, signal = read_file('note_guitare_lad.wav')
+duration = len(signal)/sample_rate
 windowed_signal = hamming(signal)
-sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
+N = get_fir_N(cutoff)
+sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
