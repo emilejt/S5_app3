@@ -46,16 +46,16 @@ def get_frequencies(signal, sample_rate, sinus_count):
     print("Frequencies:", sinus_freqs)
     print("Amplitudes:", sinus_amplitudes)
     print("Phases:", sinus_phases)
-    return sinus_freqs, sinus_amplitudes, sinus_phases, fundamental
+    return sinus_amplitudes, sinus_phases, fundamental
 
 
-def reproduce_signal(frequencies, amplitudes, phases, duration, sample_rate):
+def reproduce_signal(fundamental, amplitudes, phases, duration, sample_rate):
     t = np.linspace(0, duration, int(sample_rate*duration))
 
     reproduced_signal = np.zeros_like(t)
 
-    for i in range(len(frequencies)):
-        reproduced_signal += amplitudes[i] * np.sin(2*np.pi*frequencies[i]*t + phases[i])
+    for i in range(1, len(amplitudes)):
+        reproduced_signal += amplitudes[i-1] * np.sin(2*np.pi*i*fundamental*t + phases[i-1])
 
     return reproduced_signal
 
@@ -107,14 +107,60 @@ def save_signal_to_wav(signal, sample_rate, filename="output.wav"):
     write(filename, sample_rate, signal_int16)
 
 
+def generate_note_frequencies(ladiese_freq):
+    la_freq = ladiese_freq / 1.06
+
+    frequencies = { "do"   : la_freq * 0.595,
+                    "do#"  : la_freq * 0.630,
+                    "ré"   : la_freq * 0.667,
+                    "ré#"  : la_freq * 0.707,
+                    "mi"   : la_freq * 0.749,
+                    "fa"   : la_freq * 0.794,
+                    "fa#"  : la_freq * 0.841,
+                    "sol"  : la_freq * 0.891,
+                    "sol#" : la_freq * 0.944,
+                    "la"   : la_freq,
+                    "la#"  : ladiese_freq,
+                    "si"   : la_freq * 1.123 }
+
+    return frequencies
+
+
+def beethoven(amplitudes, phases, sample_rate, envelope, note_freqs):
+    sol_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["sol"], amplitudes, phases, 0.4, sample_rate), envelope)
+    mib_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["ré#"], amplitudes, phases, 1.5, sample_rate), envelope)
+    fa_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["fa"], amplitudes, phases, 0.4,  sample_rate), envelope)
+    re_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["ré"], amplitudes, phases, 1.5, sample_rate), envelope)
+    silence_1 = create_silence(sample_rate, 0.2)
+    silence_2 = create_silence(sample_rate, 1.5)
+
+    beethoven_audio = np.concatenate([
+        sol_audio,
+        sol_audio,
+        sol_audio,
+        mib_audio, silence_2,
+        fa_audio,
+        fa_audio,
+        fa_audio,
+        re_audio
+    ])
+
+    save_signal_to_wav(beethoven_audio, sample_rate, "beethoven.wav")
+
+
+def create_silence(sampleRate, duration_s=1):
+    return [0 for t in np.linspace(0, duration_s, int(sampleRate * duration_s))]
+
 cutoff = np.pi/1000
 sample_rate, signal = read_file('note_guitare_lad.wav')
 duration = len(signal)/sample_rate
 windowed_signal = hamming(signal)
 N = get_fir_N(cutoff)
 envelope = get_envelope(N, signal)
-sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
-reproduced_signal = reproduce_signal(sinus_freqs, sinus_amp, sinus_phases, duration, sample_rate)
+sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
+reproduced_signal = reproduce_signal(fundamental, sinus_amp, sinus_phases, duration, sample_rate)
 
 final_signal = apply_envelope_to_signal(reproduced_signal, envelope)
 save_signal_to_wav(final_signal, sample_rate)
+note_freqs = generate_note_frequencies(fundamental)
+beethoven(sinus_amp, sinus_phases, sample_rate, envelope, note_freqs)
