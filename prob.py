@@ -1,6 +1,7 @@
 from scipy.io import wavfile
 import numpy as np
 from scipy.signal import find_peaks
+from scipy.io.wavfile import write
 
 
 def read_file(filename):
@@ -49,7 +50,7 @@ def get_frequencies(signal, sample_rate, sinus_count):
 
 
 def reproduce_signal(frequencies, amplitudes, phases, duration, sample_rate):
-    t = np.linespace(0,duration, int(sample_rate*duration))
+    t = np.linspace(0, duration, int(sample_rate*duration))
 
     reproduced_signal = np.zeros_like(t)
 
@@ -78,9 +79,42 @@ def get_fir_N(cutoff):
             return N
 
 
+def get_envelope(N, signal):
+    fir_coeff = [1/N for n in range(N)]
+
+    rectified_signal = np.abs(signal)
+
+    return np.convolve(fir_coeff, rectified_signal)
+
+
+def apply_envelope_to_signal(signal, envelope):
+    if len(signal) != len(envelope):
+        min_len = min(len(signal), len(envelope))
+        signal = signal[:min_len]
+        envelope = envelope[:min_len]
+
+    return signal * envelope
+
+
+def save_signal_to_wav(signal, sample_rate, filename="output.wav"):
+    # Normalisation du signal entre -1 et 1
+    signal_normalized = signal / np.max(np.abs(signal))
+
+    # Conversion du signal en format entier 16 bits pour l'enregistrement
+    signal_int16 = np.int16(signal_normalized * 32767)
+
+    # Sauvegarde dans un fichier wav
+    write(filename, sample_rate, signal_int16)
+
+
 cutoff = np.pi/1000
 sample_rate, signal = read_file('note_guitare_lad.wav')
 duration = len(signal)/sample_rate
 windowed_signal = hamming(signal)
 N = get_fir_N(cutoff)
+envelope = get_envelope(N, signal)
 sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
+reproduced_signal = reproduce_signal(sinus_freqs, sinus_amp, sinus_phases, duration, sample_rate)
+
+final_signal = apply_envelope_to_signal(reproduced_signal, envelope)
+save_signal_to_wav(final_signal, sample_rate)
