@@ -55,25 +55,13 @@ def save_audio_file(filename, sample_rate, signal):
     signal_int16 = np.int16(signal_normalized * 32767)
     wavfile.write(filename, sample_rate, signal_int16)
 
-def plot_signal_with_envelope(signal, envelope, sample_rate):
-    # Création d'un axe de temps
-    t = np.arange(len(signal)) / sample_rate
-    
-    plt.figure(figsize=(12, 6))
-    
-    # Afficher le signal original
-    plt.plot(t, signal, label='Signal Original', alpha=0.5)
-    
-    # Afficher l'enveloppe
-    plt.plot(t, envelope, color='red', label='Enveloppe', linewidth=2)
-    
-    # Configuration du graphique
-    plt.title("Signal avec Enveloppe Temporelle")
-    plt.xlabel("Temps (s)")
-    plt.ylabel("Amplitude")
-    plt.legend()
-    plt.grid()
-    plt.xlim([0, len(signal) / sample_rate])  # Limiter l'axe des x à la durée du signal
+def plot_signal_with_envelope(envelope):
+    fig, ax = plt.subplots(1)
+
+    ax.plot(envelope)
+    ax.set_title("Enveloppe du signal initial")
+    ax.set_xlabel("Échantillons")
+    ax.set_ylabel("Amplitude")
     plt.show()
 
 def plot_impulse_response(filter_coefficients):
@@ -143,8 +131,11 @@ if __name__ == "__main__":
     save_audio_file('clean_signal.wav', sample_rate, filtered_signal)
 
     sample_rate_clean, signal_clean = read_audio_file('clean_signal.wav')
-    harmonics_basson_freqs, harmonics_basson_amp, harmonics_basson_phase, fundamental = prob.get_frequencies(signal_clean, sample_rate_clean, 32)
-    prob.plot_spectrum(signal_clean, sample_rate_clean, harmonics=harmonics_basson_freqs)
+    harmonics_basson_freqs, harmonics_basson_amp, harmonics_basson_phase, fundamental = prob.get_frequencies(filtered_signal, sample_rate, 32)
+    prob.plot_spectrum(filtered_signal, sample_rate, harmonics=harmonics_basson_freqs)
+
+    enveloppe = prob.get_envelope(order, signal)
+    plot_signal_with_envelope(enveloppe)
     # prob.plot_spectrum(signal_clean, sample_rate_clean, title="Spectre du son sans bruit 1000Hz", harmonics=harmonics_basson_freqs[:32])
 
     # plot_impulse_response(bandstop_filter)
@@ -165,28 +156,28 @@ if __name__ == "__main__":
     # plt.show()
 
 
-    fft_basson = np.fft.fft(signal)
-    basson_freqs = np.fft.fftfreq(len(signal), d=1/sample_rate)
+    # fft_basson = np.fft.fft(signal)
+    # basson_freqs = np.fft.fftfreq(len(signal), d=1/sample_rate)
 
-    fig, ax = plt.subplots(1)
-    ax.plot(basson_freqs, 20 * np.log10(np.abs(fft_basson)))
-    ax.set_xlim(0,1500)
-    ax.set_title("Spectres de fourier avant filtrage")
-    ax.set_xlabel("fréquence (Hz)")
-    ax.set_ylabel("Amplitude (dB)")
+    # fig, ax = plt.subplots(1)
+    # ax.plot(basson_freqs, 20 * np.log10(np.abs(fft_basson)))
+    # ax.set_xlim(0,1500)
+    # ax.set_title("Spectres de fourier avant filtrage")
+    # ax.set_xlabel("fréquence (Hz)")
+    # ax.set_ylabel("Amplitude (dB)")
 
-    fig, spec = plt.subplots(1)
+    # fig, spec = plt.subplots(1)
 
-    fft_basson_clean = np.fft.fft(signal_clean)
-    basson_freqs_clean = np.fft.fftfreq(len(signal_clean), d=1/sample_rate_clean)
+    # fft_basson_clean = np.fft.fft(signal_clean)
+    # basson_freqs_clean = np.fft.fftfreq(len(signal_clean), d=1/sample_rate_clean)
 
-    spec.plot(basson_freqs_clean, 20*np.log10(np.abs(fft_basson_clean)))
-    spec.set_xlim(0,1500)
-    spec.set_title("Spectre de fourier après filtrage")
-    spec.set_xlabel("fréquence (Hz)")
-    spec.set_ylabel("Amplitude (dB)")
+    # spec.plot(basson_freqs_clean, 20*np.log10(np.abs(fft_basson_clean)))
+    # spec.set_xlim(0,1500)
+    # spec.set_title("Spectre de fourier après filtrage")
+    # spec.set_xlabel("fréquence (Hz)")
+    # spec.set_ylabel("Amplitude (dB)")
 
-    plt.show()
+    # plt.show()
 
     
 
