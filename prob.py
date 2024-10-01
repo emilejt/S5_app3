@@ -2,7 +2,7 @@ from scipy.io import wavfile
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.io.wavfile import write
-
+import matplotlib.pyplot as plt
 
 # Fonction pour lire un fichier audio .wav
 def read_file(filename):
@@ -18,7 +18,7 @@ def hamming(signal):
 
 
 # Extraire les fréquences, amplitudes, et phases des harmoniques principales à partir d'un signal FFT
-def get_frequencies(signal, sample_rate, sinus_count):
+def get_ideal_frequencies(signal, sample_rate, sinus_count):
     fft_signal = np.fft.fft(signal)
     frequencies = np.fft.fftfreq(len(fft_signal), 1 / sample_rate)  # Obtenir les fréquences correspondantes
 
@@ -48,11 +48,65 @@ def get_frequencies(signal, sample_rate, sinus_count):
     print("Frequencies:", sinus_freqs)
     print("Amplitudes:", sinus_amplitudes)
     print("Phases:", sinus_phases)
-    return sinus_amplitudes, sinus_phases, fundamental
+    return sinus_freqs, sinus_amplitudes, sinus_phases, fundamental
 
 
-# Reproduire un signal à partir d'harmoniques
-def reproduce_signal(fundamental, amplitudes, phases, duration, sample_rate):
+
+def get_frequencies(signal, sample_rate, sinus_count):
+    # Appliquer la FFT pour obtenir le spectre de fréquence
+    fft_signal = np.fft.fft(signal)
+    frequencies = np.fft.fftfreq(len(fft_signal), 1 / sample_rate)  # Obtenir les fréquences correspondantes
+    magnitudes = np.abs(fft_signal)  # Obtenir les amplitudes (module de la FFT)
+
+    # Limiter aux fréquences positives
+    positive_freqs = frequencies[:len(frequencies) // 2]
+    positive_magnitudes = magnitudes[:len(magnitudes) // 2]
+
+    # Trouver la fréquence fondamentale (plus grande amplitude)
+    index_fundamental = np.argmax(positive_magnitudes)
+    fundamental = positive_freqs[index_fundamental]
+    print("La# fundamental frequency: " + str(fundamental))
+
+    # Trouver les pics dans le spectre de fréquence positif
+    peaks, _ = find_peaks(positive_magnitudes, height=0)
+
+    # Trier les pics par amplitude (les plus grands d'abord) et sélectionner les 32 plus grands
+    sorted_peaks = sorted(peaks, key=lambda x: positive_magnitudes[x], reverse=True)
+    largest_peaks = sorted_peaks[:sinus_count]  # Prendre les 32 plus grands pics
+
+    # Initialiser les listes pour les fréquences, amplitudes et phases
+    sinus_freqs = []
+    sinus_amplitudes = []
+    sinus_phases = []
+
+    # Extraire les informations des pics trouvés
+    for peak_idx in largest_peaks:
+        sinus_freqs.append(positive_freqs[peak_idx])  # Fréquence du pic
+        sinus_amplitudes.append(positive_magnitudes[peak_idx])  # Amplitude du pic
+        sinus_phases.append(np.angle(fft_signal[peak_idx]))  # Phase du pic
+
+    # Afficher les fréquences trouvées pour validation
+    print("Frequencies:", sinus_freqs)
+    print("Amplitudes:", sinus_amplitudes)
+    print("Phases:", sinus_phases)
+
+    return sinus_freqs, sinus_amplitudes, sinus_phases, fundamental
+
+
+# Reproduire un signal à partir de ses sinus les plus importantes
+def reproduce_signal(frequencies, amplitudes, phases, duration, sample_rate):
+    t = np.linspace(0, duration, int(sample_rate * duration))
+
+    reproduced_signal = np.zeros_like(t)
+
+    for i in range(0, len(amplitudes)-1):
+        reproduced_signal += amplitudes[i - 1] * np.sin(2 * np.pi * frequencies[i] * t + phases[i - 1])
+
+    return reproduced_signal
+
+
+#cree une note a partir de sa fondamentale
+def synthetize_note(fundamental, amplitudes, phases, duration, sample_rate):
     t = np.linspace(0, duration, int(sample_rate * duration))
 
     reproduced_signal = np.zeros_like(t)
@@ -140,10 +194,10 @@ def generate_note_frequencies(ladiese_freq):
 def beethoven(amplitudes, phases, sample_rate, envelope, note_freqs):
 
     # Générer les différentes notes
-    sol_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["sol"], amplitudes, phases, 0.4, sample_rate), envelope)
-    mib_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["ré#"], amplitudes, phases, 1.5, sample_rate), envelope)
-    fa_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["fa"], amplitudes, phases, 0.4,  sample_rate), envelope)
-    re_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["ré"], amplitudes, phases, 1.5, sample_rate), envelope)
+    sol_audio = apply_envelope_to_signal(synthetize_note(note_freqs["sol"], amplitudes, phases, 0.4, sample_rate), envelope)
+    mib_audio = apply_envelope_to_signal(synthetize_note(note_freqs["ré#"], amplitudes, phases, 1.5, sample_rate), envelope)
+    fa_audio = apply_envelope_to_signal(synthetize_note(note_freqs["fa"], amplitudes, phases, 0.4,  sample_rate), envelope)
+    re_audio = apply_envelope_to_signal(synthetize_note(note_freqs["ré"], amplitudes, phases, 1.5, sample_rate), envelope)
     silence_1 = create_silence(sample_rate, 0.2)
 
     # Construire la séquence de notes avec silences
@@ -165,6 +219,39 @@ def create_silence(sampleRate, duration_s=1):
     return [0 for t in np.linspace(0, duration_s, int(sampleRate * duration_s))]
 
 
+def plot_spectrum(signal, sample_rate, title="Spectrum", harmonics=None):
+    # Appliquer la FFT pour obtenir le spectre
+    fft_signal = np.fft.fft(signal)
+    frequencies = np.fft.fftfreq(len(fft_signal), 1 / sample_rate)
+
+    # Limiter aux fréquences positives
+    positive_freqs = frequencies[:len(frequencies) // 2]
+    positive_amplitudes = np.abs(fft_signal)[:len(frequencies) // 2]
+
+    # Tracer le spectre
+    plt.figure(figsize=(10, 6))
+    plt.plot(positive_freqs, positive_amplitudes, label="Spectre")
+    plt.title(title)
+    plt.xlabel("Fréquence (Hz)")
+    plt.ylabel("Amplitude")
+
+    # Ajuster les limites de l'axe y pour commencer à 0
+    plt.ylim(0, np.max(positive_amplitudes) * 1.1)
+
+    # Limiter l'axe des X à 4000 Hz
+    plt.xlim(0, 4000)
+
+    # Identifier les 32 harmoniques avec de petits marqueurs sur l'axe x
+    if harmonics is not None:
+        for harmonic in harmonics:
+            # Ajouter de petits ticks rouges en bas du graphique (petites lignes verticales seulement sur l'axe des x)
+            plt.axvline(x=harmonic, color='r', linestyle='--', ymax=0.03, label=f'Harmonique: {harmonic:.2f} Hz')
+
+    # Ne pas afficher de légende si les harmoniques sont nombreuses (limite la légende)
+    if harmonics is not None and len(harmonics) <= 5:
+        plt.legend(loc='upper right')
+
+    plt.show()
 # Code principal pour traiter un fichier et produire les résultats
 cutoff = np.pi / 1000
 sample_rate, signal = read_file('note_guitare_lad.wav')  # Lire le fichier audio
@@ -176,10 +263,17 @@ N = get_fir_N(cutoff)
 envelope = get_envelope(N, signal)
 
 # Extraire les parametre sinusoidaux
-sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
+sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
+
+# Analyser le signal d'origine (avant synthèse)
+plot_spectrum(signal, sample_rate, title="Spectre du son analysé", harmonics=sinus_freqs[:32])
 
 # reproduire le signal a partir des sinusoides
-reproduced_signal = reproduce_signal(fundamental, sinus_amp, sinus_phases, duration, sample_rate)
+reproduced_signal = reproduce_signal(sinus_freqs, sinus_amp, sinus_phases, duration, sample_rate)
+
+# Analyser le signal synthétisé
+plot_spectrum(reproduced_signal, sample_rate, title="Spectre du son synthétisé", harmonics=sinus_freqs[:32])
+
 # Appliquer l'enveloppe et sauvegarder le signal final
 final_signal = apply_envelope_to_signal(reproduced_signal, envelope)
 save_signal_to_wav(final_signal, sample_rate)
