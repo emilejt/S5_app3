@@ -255,6 +255,24 @@ def plot_spectrum(signal, sample_rate, title="Spectrum (en dB)", harmonics=None)
 
     plt.show()
 
+def plot_envelope(envelope, sample_rate, title="Enveloppe temporelle"):
+    # Créer l'axe du temps basé sur la durée de l'enveloppe
+    time = np.arange(len(envelope)) / sample_rate  # Crée un axe du temps
+
+    # Si les dimensions diffèrent, réduire à la plus petite taille
+    min_len = min(len(time), len(envelope))
+    time = time[:min_len]
+    envelope = envelope[:min_len]
+
+    # Tracer l'enveloppe temporelle
+    plt.figure(figsize=(10, 6))
+    plt.plot(time, envelope, color='red', label="Enveloppe temporelle", linewidth=2)
+    plt.title(title)
+    plt.xlabel("Temps (s)")
+    plt.ylabel("Amplitude")
+    plt.legend()
+    plt.show()
+
 if __name__ == "__main__":
     # Code principal pour traiter un fichier et produire les résultats
     cutoff = np.pi / 1000
@@ -265,7 +283,7 @@ if __name__ == "__main__":
     # calcul de l enveloppe via un filtre fir
     N = get_fir_N(cutoff)
     envelope = get_envelope(N, signal)
-
+    plot_envelope(envelope, sample_rate)
     # Extraire les parametre sinusoidaux
     sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
 
