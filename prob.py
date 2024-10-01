@@ -4,6 +4,7 @@ from scipy.signal import find_peaks
 from scipy.io.wavfile import write
 import matplotlib.pyplot as plt
 
+
 # Fonction pour lire un fichier audio .wav
 def read_file(filename):
     sample_rate, signal = wavfile.read(filename)
@@ -49,7 +50,6 @@ def get_ideal_frequencies(signal, sample_rate, sinus_count):
     print("Amplitudes:", sinus_amplitudes)
     print("Phases:", sinus_phases)
     return sinus_freqs, sinus_amplitudes, sinus_phases, fundamental
-
 
 
 def get_frequencies(signal, sample_rate, sinus_count):
@@ -219,8 +219,8 @@ def create_silence(sampleRate, duration_s=1):
     return [0 for t in np.linspace(0, duration_s, int(sampleRate * duration_s))]
 
 
-def plot_spectrum(signal, sample_rate, title="Spectrum", harmonics=None):
-    # Appliquer la FFT pour obtenir le spectre
+def plot_spectrum(signal, sample_rate, title="Spectrum (en dB)", harmonics=None):
+    # Appliquer la FFT pour obtenir le spectre de fréquence
     fft_signal = np.fft.fft(signal)
     frequencies = np.fft.fftfreq(len(fft_signal), 1 / sample_rate)
 
@@ -228,15 +228,18 @@ def plot_spectrum(signal, sample_rate, title="Spectrum", harmonics=None):
     positive_freqs = frequencies[:len(frequencies) // 2]
     positive_amplitudes = np.abs(fft_signal)[:len(frequencies) // 2]
 
-    # Tracer le spectre
+    # Convertir les amplitudes en dB (éviter log(0) en ajoutant un petit epsilon)
+    positive_amplitudes_db = 20 * np.log10(positive_amplitudes + 1e-10)
+
+    # Tracer le spectre en dB
     plt.figure(figsize=(10, 6))
-    plt.plot(positive_freqs, positive_amplitudes, label="Spectre")
+    plt.plot(positive_freqs, positive_amplitudes_db, label="Spectre en dB")
     plt.title(title)
     plt.xlabel("Fréquence (Hz)")
-    plt.ylabel("Amplitude")
+    plt.ylabel("Amplitude (dB)")
 
-    # Ajuster les limites de l'axe y pour commencer à 0
-    plt.ylim(0, np.max(positive_amplitudes) * 1.1)
+    # Ajuster les limites de l'axe y pour mieux voir les détails
+    plt.ylim(np.min(positive_amplitudes_db) * 1.1, np.max(positive_amplitudes_db) * 1.1)
 
     # Limiter l'axe des X à 4000 Hz
     plt.xlim(0, 4000)
