@@ -10,20 +10,47 @@ def read_audio_file(filename):
 
 # Fonction qui determine les coefficient du filtre
 def design_bandstop_filter(sample_rate, cutoff_low, cutoff_high, order):
+    freq_central = (cutoff_high + cutoff_low) / 2
+    fc_passe_bas = cutoff_high - freq_central
+    frequences_couper = cutoff_high - cutoff_low
 
-    # Normalisation des frequences de coupures pour utiliser firwin
-    nyquist = 0.5 * sample_rate
-    low = cutoff_low / nyquist
-    high = cutoff_high / nyquist
 
-    # conception du filtre avec fenetre de hamming
-    bandstop_filter = firwin(order + 1, [low, high], pass_zero=True, window='hamming')
+    w0 = (2* np.pi * freq_central) / sample_rate
+    w1 = (2 * np.pi * fc_passe_bas) / sample_rate
 
-    return bandstop_filter
+    m = (fc_passe_bas * order) / sample_rate
+    k = (2 * m) + 1
+
+    # Sequence d'echantillons autour de 0
+    data = np.linspace(-(order / 2) + 1, order / 2, order)
+    dn = [1 if data[i] == 0 else 0 for i in range(0, order, 1)]
+    h_filtre = []
+
+    for n in data:
+        # pour eviter la division par 0
+        if n == 0:
+            dn.append(1)
+            h_filtre.append(k / order)
+        else:
+            dn.append(0)
+            h_filtre.append((np.sin((np.pi * n * k) / order) / np.sin((np.pi * n) / order )) / order)
+    
+    # Applique fenetre de Hamming pour ameliorer filtre
+    window = np.hamming(order)
+    h_filtre = h_filtre * window
+
+    # transformation en filtre coupe-bande avec sinusoidale centre sur freq_central
+    h_cb = [dn[i] - np.multiply(2 * h_filtre[i], np.cos(w0 * data[i])) for i in range(0, order, 1)]
+    
+    # Generation de H(n) en frequence
+    Hn = np.fft.fft(h_cb)
+    cb_frequences = np.fft.fftfreq(len(h_cb), d = 1/sample_rate)
+
+    return h_cb
 
 # Fonction qui applique filtre aux signaux corrompus
 def apply_filter(signal, filter_coefficient):
-    filtered_signal = lfilter(filter_coefficient, 1.0, signal)
+    filtered_signal = np.convolve(signal, filter_coefficient, mode='same')
     return filtered_signal
 
 # Fonction qui cree fichier wav avec nom au choix
@@ -37,8 +64,10 @@ if __name__ == "__main__":
     cutoff_high = 1040
     order = 6000
 
+    # Lecture du fichier wav corrompue
     sample_rate, signal = read_audio_file('note_basson_plus_sinus_1000_hz.wav')
 
+    # Creation et application du filtre
     bandstop_filter = design_bandstop_filter(sample_rate, cutoff_low, cutoff_high, order)
     filtered_signal = apply_filter(signal, bandstop_filter)
 
@@ -52,5 +81,6 @@ if __name__ == "__main__":
     plt.grid()
     plt.axvline(cutoff_low, color='red', linestyle='--')
     plt.axvline(cutoff_high, color='red', linestyle='--')
+    plt.xlim([0, 3000])
     plt.show()
 
