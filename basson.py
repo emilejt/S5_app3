@@ -12,11 +12,9 @@ def read_audio_file(filename):
 def design_bandstop_filter(sample_rate, cutoff_low, cutoff_high, order):
     freq_central = (cutoff_high + cutoff_low) / 2
     fc_passe_bas = cutoff_high - freq_central
-    frequences_couper = cutoff_high - cutoff_low
 
 
-    w0 = (2* np.pi * freq_central) / sample_rate
-    w1 = (2 * np.pi * fc_passe_bas) / sample_rate
+    w = (2* np.pi * freq_central) / sample_rate
 
     m = (fc_passe_bas * order) / sample_rate
     k = (2 * m) + 1
@@ -40,11 +38,7 @@ def design_bandstop_filter(sample_rate, cutoff_low, cutoff_high, order):
     h_filtre = h_filtre * window
 
     # transformation en filtre coupe-bande avec sinusoidale centre sur freq_central
-    h_cb = [dn[i] - np.multiply(2 * h_filtre[i], np.cos(w0 * data[i])) for i in range(0, order, 1)]
-    
-    # Generation de H(n) en frequence
-    Hn = np.fft.fft(h_cb)
-    cb_frequences = np.fft.fftfreq(len(h_cb), d = 1/sample_rate)
+    h_cb = [dn[i] - np.multiply(2 * h_filtre[i], np.cos(w * data[i])) for i in range(0, order, 1)]
 
     return h_cb
 
