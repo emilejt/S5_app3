@@ -65,7 +65,6 @@ def get_frequencies(signal, sample_rate, sinus_count):
     # Trouver la fréquence fondamentale (plus grande amplitude)
     index_fundamental = np.argmax(positive_magnitudes)
     fundamental = positive_freqs[index_fundamental]
-    print("La# fundamental frequency: " + str(fundamental))
 
     # Trouver les pics dans le spectre de fréquence positif
     peaks, _ = find_peaks(positive_magnitudes, height=0)
@@ -252,34 +251,36 @@ def plot_spectrum(signal, sample_rate, title="Spectrum", harmonics=None):
         plt.legend(loc='upper right')
 
     plt.show()
-# Code principal pour traiter un fichier et produire les résultats
-cutoff = np.pi / 1000
-sample_rate, signal = read_file('note_guitare_lad.wav')  # Lire le fichier audio
-duration = len(signal) / sample_rate  # calculer la duree du signal
-windowed_signal = hamming(signal)  # appliquer la fenetre de hamming
 
-# calcul de l enveloppe via un filtre fir
-N = get_fir_N(cutoff)
-envelope = get_envelope(N, signal)
+if __name__ == "__main__":
+    # Code principal pour traiter un fichier et produire les résultats
+    cutoff = np.pi / 1000
+    sample_rate, signal = read_file('note_guitare_lad.wav')  # Lire le fichier audio
+    duration = len(signal) / sample_rate  # calculer la duree du signal
+    windowed_signal = hamming(signal)  # appliquer la fenetre de hamming
 
-# Extraire les parametre sinusoidaux
-sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
+    # calcul de l enveloppe via un filtre fir
+    N = get_fir_N(cutoff)
+    envelope = get_envelope(N, signal)
 
-# Analyser le signal d'origine (avant synthèse)
-plot_spectrum(signal, sample_rate, title="Spectre du son analysé", harmonics=sinus_freqs[:32])
+    # Extraire les parametre sinusoidaux
+    sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
 
-# reproduire le signal a partir des sinusoides
-reproduced_signal = reproduce_signal(sinus_freqs, sinus_amp, sinus_phases, duration, sample_rate)
+    # Analyser le signal d'origine (avant synthèse)
+    plot_spectrum(signal, sample_rate, title="Spectre du son analysé", harmonics=sinus_freqs[:32])
 
-# Analyser le signal synthétisé
-plot_spectrum(reproduced_signal, sample_rate, title="Spectre du son synthétisé", harmonics=sinus_freqs[:32])
+    # reproduire le signal a partir des sinusoides
+    reproduced_signal = reproduce_signal(sinus_freqs, sinus_amp, sinus_phases, duration, sample_rate)
 
-# Appliquer l'enveloppe et sauvegarder le signal final
-final_signal = apply_envelope_to_signal(reproduced_signal, envelope)
-save_signal_to_wav(final_signal, sample_rate)
+    # Analyser le signal synthétisé
+    plot_spectrum(reproduced_signal, sample_rate, title="Spectre du son synthétisé", harmonics=sinus_freqs[:32])
 
-# Générer les fréquences des notes pour Beethoven
-note_freqs = generate_note_frequencies(fundamental)
+    # Appliquer l'enveloppe et sauvegarder le signal final
+    final_signal = apply_envelope_to_signal(reproduced_signal, envelope)
+    save_signal_to_wav(final_signal, sample_rate)
 
-# Reproduire la séquence de Beethoven et la sauvegarder
-beethoven(sinus_amp, sinus_phases, sample_rate, envelope, note_freqs)
+    # Générer les fréquences des notes pour Beethoven
+    note_freqs = generate_note_frequencies(fundamental)
+
+    # Reproduire la séquence de Beethoven et la sauvegarder
+    beethoven(sinus_amp, sinus_phases, sample_rate, envelope, note_freqs)
