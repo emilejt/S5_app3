@@ -138,23 +138,20 @@ def generate_note_frequencies(ladiese_freq):
 
 # Reproduire les premières notes de la 5e symphonie de Beethoven
 def beethoven(amplitudes, phases, sample_rate, envelope, note_freqs):
+
     # Générer les différentes notes
-    sol_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["sol"], amplitudes, phases, 0.4, sample_rate),
-                                         envelope)
-    mib_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["ré#"], amplitudes, phases, 1.5, sample_rate),
-                                         envelope)
-    fa_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["fa"], amplitudes, phases, 0.4, sample_rate),
-                                        envelope)
-    re_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["ré"], amplitudes, phases, 1.5, sample_rate),
-                                        envelope)
-    silence_2 = create_silence(sample_rate, 1.5)
+    sol_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["sol"], amplitudes, phases, 0.4, sample_rate), envelope)
+    mib_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["ré#"], amplitudes, phases, 1.5, sample_rate), envelope)
+    fa_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["fa"], amplitudes, phases, 0.4,  sample_rate), envelope)
+    re_audio = apply_envelope_to_signal(reproduce_signal(note_freqs["ré"], amplitudes, phases, 1.5, sample_rate), envelope)
+    silence_1 = create_silence(sample_rate, 0.2)
 
     # Construire la séquence de notes avec silences
     beethoven_audio = np.concatenate([
         sol_audio,
         sol_audio,
         sol_audio,
-        mib_audio, silence_2,
+        mib_audio, silence_1,
         fa_audio,
         fa_audio,
         fa_audio,
