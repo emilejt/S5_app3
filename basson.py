@@ -145,13 +145,17 @@ if __name__ == "__main__":
     # Synthese du basson filtered
     duration = len(filtered_signal) / sample_rate
     reproduced_signal = prob.reproduce_signal(basson_freqs_clean, basson_amp_clean, basson_phase_clean, duration, sample_rate)
-    prob.plot_spectrum(reproduced_signal, sample_rate, title="Spectre du son reproduit avec harmoniques")
+    passe_bas_N = prob.get_fir_N(np.pi/1000)
+    envelope = prob.get_envelope(passe_bas_N, filtered_signal)
+
+    signal_envelope = prob.apply_envelope_to_signal(reproduced_signal, envelope)
+    prob.plot_spectrum(signal_envelope, sample_rate, title="Spectre du son reproduit avec harmoniques")
 
 
     sample_rate_clean, signal_clean = read_audio_file('clean_signal.wav')
     # prob.plot_spectrum(signal_clean, sample_rate_clean, title="Spectre du son sans bruit 1000Hz", harmonics=harmonics_basson_freqs[:32])
-    # passe_bas_N = prob.get_fir_N(np.pi/1000)
-    # envelope = prob.get_envelope(passe_bas_N, filtered_signal)
+    
+    
     # prob.plot_envelope(envelope, sample_rate)
     # plot_impulse_response(bandstop_filter)
 
