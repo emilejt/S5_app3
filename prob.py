@@ -5,9 +5,7 @@ from scipy.io.wavfile import write
 import matplotlib.pyplot as plt
 
 
-
-
-
+#Lit le fichier .wav et retourne le signal normalise et sa frequence d'echantillonage
 def read_file(filename):
     sample_rate, signal = wavfile.read(filename)
     signal_normalized = signal / np.max(np.abs(signal))
@@ -287,9 +285,10 @@ if __name__ == "__main__":
 
     # calcul de l enveloppe via un filtre fir
     N = get_fir_N(cutoff)
-    plot_frequency_response(N)
+    #plot_frequency_response(N)
     envelope = get_envelope(N, signal)
     plot_envelope(envelope, sample_rate)
+
     # Extraire les parametre sinusoidaux
     sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
     # Analyser le signal d'origine (avant synthèse)
@@ -298,12 +297,14 @@ if __name__ == "__main__":
     # reproduire le signal a partir des sinusoides
     reproduced_signal = reproduce_signal(sinus_freqs, sinus_amp, sinus_phases, duration, sample_rate)
 
-    # Analyser le signal synthétisé
-    plot_spectrum(reproduced_signal, sample_rate, title="Spectre du son synthétisé", harmonics=sinus_freqs[:32])
+    # # Analyser le signal synthétisé
+    # plot_spectrum(reproduced_signal, sample_rate, title="Spectre du son synthétisé", harmonics=sinus_freqs[:32])
 
     # Appliquer l'enveloppe et sauvegarder le signal final
     final_signal = apply_envelope_to_signal(reproduced_signal, envelope)
     save_signal_to_wav(final_signal, sample_rate)
+
+    #analyser le signal synthétisé après avoir appliqué l'enveloppe
     plot_spectrum(final_signal, sample_rate, title="Spectre du son synthétisé", harmonics=sinus_freqs[:32])
     # Générer les fréquences des notes pour Beethoven
     note_freqs = generate_note_frequencies(fundamental)
