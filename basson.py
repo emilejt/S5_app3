@@ -107,7 +107,7 @@ def plot_amp_phase(filter_coefficients):
     w, amp = freqz(filter_coefficients)
     angles = np.unwrap(np.angle(amp))
     fig, ax1 = plt.subplots()
-    ax1.set_title('Réponse en fréquence du filtre coupe-bande')
+    ax1.set_title('Réponse amplitude/phase du filtre coupe-bande')
     ax1.plot(w,20*np.log10(np.abs(amp)), color='b')
     ax1.set_ylabel('Amplitude [dB]', color='b')
     ax1.set_xlabel('Fréquence normalisé [rad/échantillon]')
@@ -131,6 +131,7 @@ if __name__ == "__main__":
     bandstop_filter = design_bandstop_filter(sample_rate, cutoff_low, cutoff_high, order)
     filtered_signal = apply_filter(signal, bandstop_filter)
 
+    # Sauvergarde du basson filtrer
     save_audio_file('clean_signal.wav', sample_rate, filtered_signal)
 
     # Affichage des spectres d'amplitude des signaux avant et apres filtrage
@@ -139,8 +140,6 @@ if __name__ == "__main__":
     basson_freqs_clean, basson_amp_clean, basson_phase_clean, fundamental_clean = prob.get_frequencies(filtered_signal, sample_rate, 32)
     prob.plot_spectrum(filtered_signal, sample_rate, title="Spectre d'amplitude apres filtrage")
 
-    enveloppe = prob.get_envelope(order, signal)
-    #plot_signal_with_envelope(enveloppe)
 
     # Synthese du basson filtered
     duration = len(filtered_signal) / sample_rate
@@ -148,79 +147,33 @@ if __name__ == "__main__":
     passe_bas_N = prob.get_fir_N(np.pi/1000)
     envelope = prob.get_envelope(passe_bas_N, filtered_signal)
 
+    # Affichage de la synthese du basson filtrer apres envelope
     signal_envelope = prob.apply_envelope_to_signal(reproduced_signal, envelope)
-    prob.plot_spectrum(signal_envelope, sample_rate, title="Spectre du son reproduit avec harmoniques")
+    prob.plot_spectrum(signal_envelope, sample_rate, title="Spectre du son reproduit avec harmoniques", harmonics=basson_freqs_clean[:32])
 
+    # Affichage de l'enveloppe
+    prob.plot_envelope(envelope, sample_rate)
 
-    sample_rate_clean, signal_clean = read_audio_file('clean_signal.wav')
-    # prob.plot_spectrum(signal_clean, sample_rate_clean, title="Spectre du son sans bruit 1000Hz", harmonics=harmonics_basson_freqs[:32])
-    
-    
-    # prob.plot_envelope(envelope, sample_rate)
-    # plot_impulse_response(bandstop_filter)
+    # Reponse impulsionnel du filtre
+    plot_impulse_response(bandstop_filter)
 
-    # plot_sine_response(1000, bandstop_filter)
+    # Graphique reponse du filtre a sinus de 1000Hz
+    plot_sine_response(1000, bandstop_filter)
 
-    # plot_amp_phase(bandstop_filter)
+    # # graphique amplitude phase du filtre
+    plot_amp_phase(bandstop_filter)
 
-    # w, h = freqz(bandstop_filter, worN=8000)
-    # plt.plot(0.5 * sample_rate * w / np.pi, np.abs(h), 'b')
-    # plt.title("Réponse en fréquence du filtre coupe-bande")
-    # plt.xlabel('Fréquence (Hz)')
-    # plt.ylabel('Gain')
-    # plt.grid()
-    # plt.axvline(cutoff_low, color='red', linestyle='--')
-    # plt.axvline(cutoff_high, color='red', linestyle='--')
-    # plt.xlim([0, 3000])
-    # plt.show()
-
-
-    # fft_basson = np.fft.fft(signal)
-    # basson_freqs = np.fft.fftfreq(len(signal), d=1/sample_rate)
-    #
-    # fig, ax = plt.subplots(1)
-    # ax.plot(basson_freqs, 20 * np.log10(np.abs(fft_basson)))
-    # ax.set_xlim(0,1500)
-    # ax.set_title("Spectres de fourier avant filtrage")
-    # ax.set_xlabel("fréquence (Hz)")
-    # ax.set_ylabel("Amplitude (dB)")
-    #
-    # fig, spec = plt.subplots(1)
-    #
-    # fft_basson_clean = np.fft.fft(signal_clean)
-    # basson_freqs_clean = np.fft.fftfreq(len(signal_clean), d=1/sample_rate_clean)
-    #
-    # spec.plot(basson_freqs_clean, 20*np.log10(np.abs(fft_basson_clean)))
-    # spec.set_xlim(0,1500)
-    # spec.set_title("Spectre de fourier après filtrage")
-    # spec.set_xlabel("fréquence (Hz)")
-    # spec.set_ylabel("Amplitude (dB)")
-    #
-    # plt.show()
-
-
-    # fft_basson = np.fft.fft(signal)
-    # basson_freqs = np.fft.fftfreq(len(signal), d=1/sample_rate)
-
-    # fig, ax = plt.subplots(1)
-    # ax.plot(basson_freqs, 20 * np.log10(np.abs(fft_basson)))
-    # ax.set_xlim(0,1500)
-    # ax.set_title("Spectres de fourier avant filtrage")
-    # ax.set_xlabel("fréquence (Hz)")
-    # ax.set_ylabel("Amplitude (dB)")
-
-    # fig, spec = plt.subplots(1)
-
-    # fft_basson_clean = np.fft.fft(signal_clean)
-    # basson_freqs_clean = np.fft.fftfreq(len(signal_clean), d=1/sample_rate_clean)
-
-    # spec.plot(basson_freqs_clean, 20*np.log10(np.abs(fft_basson_clean)))
-    # spec.set_xlim(0,1500)
-    # spec.set_title("Spectre de fourier après filtrage")
-    # spec.set_xlabel("fréquence (Hz)")
-    # spec.set_ylabel("Amplitude (dB)")
-
-    # plt.show()
+    # Reponse en frequence du filtre coupe-bande
+    w, h = freqz(bandstop_filter, worN=8000)
+    plt.plot(0.5 * sample_rate * w / np.pi, np.abs(h), 'b')
+    plt.title("Réponse en fréquence du filtre coupe-bande")
+    plt.xlabel('Fréquence (Hz)')
+    plt.ylabel('Gain')
+    plt.grid()
+    plt.axvline(cutoff_low, color='red', linestyle='--')
+    plt.axvline(cutoff_high, color='red', linestyle='--')
+    plt.xlim([0, 3000])
+    plt.show()
 
     
 
