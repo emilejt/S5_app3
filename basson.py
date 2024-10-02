@@ -77,7 +77,7 @@ def plot_impulse_response(filter_coefficients):
     
     # Tracer la réponse à l'impulsion
     plt.figure(figsize=(10, 4))
-    plt.stem(n, response)
+    plt.plot(n, response)
     plt.title("Réponse à l'Impulsion h(n)")
     plt.xlabel("n")
     plt.ylabel("Amplitude")
@@ -90,14 +90,16 @@ def plot_sine_response(frequency, filter_coefficients):
     sine_wave = np.sin(2 * np.pi * frequency)  # Signal sinusoïdal de 1000 Hz
     response = apply_filter(sine_wave, filter_coefficients)
 
+    n = np.arange(-len(filter_coefficients) // 2, len(filter_coefficients) // 2)  # Indices de -N/2 à N/2
+
     plt.figure(figsize=(10, 4))
-    plt.plot(response, label='Réponse du Filtre')  # Utiliser n pour l'axe x
+    plt.plot(n, response, label='Réponse du Filtre')  # Utiliser n pour l'axe x
     plt.title("Réponse à une Sinusoïde de 1000 Hz")
     plt.xlabel("Échantillons")  # Modifier l'étiquette de l'axe des x
     plt.ylabel("Amplitude")
     plt.legend()
+    plt.xlim(int(-len(filter_coefficients) / 2), int(len(filter_coefficients) / 2)) 
     plt.grid()
-    plt.xlim(0, len(response))  # Limiter l'axe x à la longueur de la réponse
     plt.show()
 
 def plot_amp_phase(filter_coefficients):
@@ -105,12 +107,12 @@ def plot_amp_phase(filter_coefficients):
     angles = np.unwrap(np.angle(amp))
     fig, ax1 = plt.subplots()
     ax1.set_title('Réponse en fréquence du filtre coupe-bande')
-    ax1.plot(w,20*np.log10(np.abs(amp)))
+    ax1.plot(w,20*np.log10(np.abs(amp)), color='b')
     ax1.set_ylabel('Amplitude [dB]', color='b')
     ax1.set_xlabel('Fréquence normalisé [rad/échantillon]')
     ax2 = ax1.twinx()
-    ax2.plot(w, angles, 'g-')
-    ax2.set_ylabel('Phase (rad)', color='g')
+    ax2.plot(w, angles, 'g-', color='r')
+    ax2.set_ylabel('Phase (rad)', color='r')
     ax2.grid(True)
     ax2.axis('tight')
     plt.show()
@@ -130,12 +132,16 @@ if __name__ == "__main__":
 
     save_audio_file('clean_signal.wav', sample_rate, filtered_signal)
 
-    sample_rate_clean, signal_clean = read_audio_file('clean_signal.wav')
-    harmonics_basson_freqs, harmonics_basson_amp, harmonics_basson_phase, fundamental = prob.get_frequencies(filtered_signal, sample_rate, 32)
-    prob.plot_spectrum(filtered_signal, sample_rate, harmonics=harmonics_basson_freqs)
+    # Affichage des spectres d'amplitude des signaux avant et apres filtrage
+    basson_freqs, basson_amp, basson_phase, fundamental = prob.get_frequencies(signal, sample_rate, 32)
+    prob.plot_spectrum(signal, sample_rate, title="Spectre d'amplitude avant filtrage",harmonics=basson_freqs)
+    basson_freqs_clean, basson_amp_clean, basson_phase_clean, fundamental_clean = prob.get_frequencies(filtered_signal, sample_rate, 32)
+    prob.plot_spectrum(filtered_signal, sample_rate, title="Spectre d'amplitude apres filtrage" ,harmonics=basson_freqs_clean)
 
     enveloppe = prob.get_envelope(order, signal)
-    plot_signal_with_envelope(enveloppe)
+    #plot_signal_with_envelope(enveloppe)
+
+    sample_rate_clean, signal_clean = read_audio_file('clean_signal.wav')
     # prob.plot_spectrum(signal_clean, sample_rate_clean, title="Spectre du son sans bruit 1000Hz", harmonics=harmonics_basson_freqs[:32])
 
     # plot_impulse_response(bandstop_filter)
