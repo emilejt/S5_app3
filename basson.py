@@ -147,8 +147,8 @@ if __name__ == "__main__":
     prob.plot_spectrum(signal_clean, sample_rate_clean, harmonics=harmonics_basson_freqs)
     # prob.plot_spectrum(signal_clean, sample_rate_clean, title="Spectre du son sans bruit 1000Hz", harmonics=harmonics_basson_freqs[:32])
     passe_bas_N = prob.get_fir_N(np.pi/1000)
-    envelope = prob.get_envelope(passe_bas_N, signal)
-    prob.plot_envelope(envelope,sample_rate)
+    envelope = prob.get_envelope(passe_bas_N, filtered_signal)
+    prob.plot_envelope(envelope, sample_rate)
     # plot_impulse_response(bandstop_filter)
 
     # plot_sine_response(1000, bandstop_filter)

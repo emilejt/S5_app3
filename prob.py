@@ -18,41 +18,8 @@ def hamming(signal):
     return windowed_signal
 
 
-# Extraire les fréquences, amplitudes, et phases des harmoniques principales à partir d'un signal FFT
-def get_ideal_frequencies(signal, sample_rate, sinus_count):
-    fft_signal = np.fft.fft(signal)
-    frequencies = np.fft.fftfreq(len(fft_signal), 1 / sample_rate)  # Obtenir les fréquences correspondantes
 
-    # Trouver la fréquence fondamentale (plus grande amplitude)
-    index_fundamental = np.argmax(np.abs(fft_signal))
-    fundamental = np.abs(frequencies[index_fundamental])
-    print("La# fundamental frequency: " + str(fundamental))
-
-    sinus_freqs = []
-    sinus_amplitudes = []
-    sinus_phases = []
-
-    # Stocker la fréquence fondamentale, l'amplitude et la phase
-    sinus_freqs.append(fundamental)
-    sinus_amplitudes.append(np.abs(fft_signal[index_fundamental]))
-    sinus_phases.append(np.angle(fft_signal[index_fundamental]))
-
-    # Extraire les harmoniques (multiples de la fréquence fondamentale)
-    for i in range(2, sinus_count + 1):  # Start from the 2nd harmonic
-        harmonic_freq = fundamental * i
-        closest_idx = np.argmin(np.abs(frequencies - harmonic_freq))  # Find the closest frequency bin
-
-        sinus_freqs.append(frequencies[closest_idx])
-        sinus_amplitudes.append(np.abs(fft_signal[closest_idx]))
-        sinus_phases.append(np.angle(fft_signal[closest_idx]))
-
-    print("Frequencies:", sinus_freqs)
-    print("Amplitudes:", sinus_amplitudes)
-    print("Phases:", sinus_phases)
-    return sinus_freqs, sinus_amplitudes, sinus_phases, fundamental
-
-
-def get_frequencies(signal, sample_rate, sinus_count):
+def get_frequencies(signal, sample_rate, sinus_count, neighborhood_size=200):
     # Appliquer la FFT pour obtenir le spectre de fréquence
     fft_signal = np.fft.fft(signal)
     frequencies = np.fft.fftfreq(len(fft_signal), 1 / sample_rate)  # Obtenir les fréquences correspondantes
@@ -62,29 +29,44 @@ def get_frequencies(signal, sample_rate, sinus_count):
     positive_freqs = frequencies[:len(frequencies) // 2]
     positive_magnitudes = magnitudes[:len(magnitudes) // 2]
 
-    # Trouver la fréquence fondamentale (plus grande amplitude)
+    # Trouver la fréquence fondamentale (plus grande amplitude dans les basses fréquences)
     index_fundamental = np.argmax(positive_magnitudes)
     fundamental = positive_freqs[index_fundamental]
-
-    # Trouver les pics dans le spectre de fréquence positif
-    peaks, _ = find_peaks(positive_magnitudes, height=0)
-
-    # Trier les pics par amplitude (les plus grands d'abord) et sélectionner les 32 plus grands
-    sorted_peaks = sorted(peaks, key=lambda x: positive_magnitudes[x], reverse=True)
-    largest_peaks = sorted_peaks[:sinus_count]  # Prendre les 32 plus grands pics
+    print(f"Fréquence fondamentale: {fundamental} Hz")
 
     # Initialiser les listes pour les fréquences, amplitudes et phases
     sinus_freqs = []
     sinus_amplitudes = []
     sinus_phases = []
 
-    # Extraire les informations des pics trouvés
-    for peak_idx in largest_peaks:
-        sinus_freqs.append(positive_freqs[peak_idx])  # Fréquence du pic
-        sinus_amplitudes.append(positive_magnitudes[peak_idx])  # Amplitude du pic
-        sinus_phases.append(np.angle(fft_signal[peak_idx]))  # Phase du pic
+    # Stocker la fondamentale
+    sinus_freqs.append(fundamental)
+    sinus_amplitudes.append(positive_magnitudes[index_fundamental])
+    sinus_phases.append(np.angle(fft_signal[index_fundamental]))
 
-    # Afficher les fréquences trouvées pour validation
+    # Extraire les pics autour des harmoniques théoriques
+    for i in range(2, sinus_count + 1):  # À partir de la 2e harmonique
+        harmonic_freq = fundamental * i
+
+        # Chercher les fréquences dans une région autour de l'harmonique théorique (± neighborhood_size Hz)
+        neighborhood_mask = (positive_freqs > harmonic_freq - neighborhood_size) & (
+                    positive_freqs < harmonic_freq + neighborhood_size)
+        neighborhood_freqs = positive_freqs[neighborhood_mask]
+        neighborhood_magnitudes = positive_magnitudes[neighborhood_mask]
+
+        # Trouver le pic dans cette région
+        if len(neighborhood_magnitudes) > 0:
+            peak_idx = np.argmax(neighborhood_magnitudes)  # Index du plus grand pic dans la région
+            true_peak_freq = neighborhood_freqs[peak_idx]
+            true_peak_amplitude = neighborhood_magnitudes[peak_idx]
+            true_peak_phase = np.angle(fft_signal[np.where(positive_freqs == true_peak_freq)][0])
+
+            # Ajouter ce pic dans la liste des harmoniques
+            sinus_freqs.append(true_peak_freq)
+            sinus_amplitudes.append(true_peak_amplitude)
+            sinus_phases.append(true_peak_phase)
+
+    # Afficher les résultats pour validation
     print("Frequencies:", sinus_freqs)
     print("Amplitudes:", sinus_amplitudes)
     print("Phases:", sinus_phases)
@@ -98,7 +80,7 @@ def reproduce_signal(frequencies, amplitudes, phases, duration, sample_rate):
 
     reproduced_signal = np.zeros_like(t)
 
-    for i in range(0, len(amplitudes)-1):
+    for i in range(0, len(amplitudes)):
         reproduced_signal += amplitudes[i - 1] * np.sin(2 * np.pi * frequencies[i] * t + phases[i - 1])
 
     return reproduced_signal
@@ -241,7 +223,7 @@ def plot_spectrum(signal, sample_rate, title="Spectrum (en dB)", harmonics=None)
     plt.ylim(np.min(positive_amplitudes_db) * 1.1, np.max(positive_amplitudes_db) * 1.1)
 
     # Limiter l'axe des X à 4000 Hz
-    plt.xlim(0, 4000)
+
 
     # Identifier les 32 harmoniques avec de petits marqueurs sur l'axe x
     if harmonics is not None:
@@ -286,7 +268,7 @@ if __name__ == "__main__":
     plot_envelope(envelope, sample_rate)
     # Extraire les parametre sinusoidaux
     sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
-
+    print(len(sinus_freqs))
     # Analyser le signal d'origine (avant synthèse)
     plot_spectrum(signal, sample_rate, title="Spectre du son analysé", harmonics=sinus_freqs[:32])
 
