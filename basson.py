@@ -8,7 +8,8 @@ import prob
 # Fonction pour lecture du fichier wav qui retourne le signal et sa frequence d'echantillonage
 def read_audio_file(filename):
     sample_rate, signal = wavfile.read(filename)
-    return sample_rate, signal
+    signal_normalized = signal / np.max(np.abs(signal))
+    return sample_rate, signal_normalized
 
 # Fonction qui determine les coefficient du filtre
 def design_bandstop_filter(sample_rate, cutoff_low, cutoff_high, order):
@@ -133,10 +134,10 @@ if __name__ == "__main__":
     save_audio_file('clean_signal.wav', sample_rate, filtered_signal)
 
     # Affichage des spectres d'amplitude des signaux avant et apres filtrage
-    # basson_freqs, basson_amp, basson_phase, fundamental = prob.get_frequencies(signal, sample_rate, 32)
-    # prob.plot_spectrum(signal, sample_rate, title="Spectre d'amplitude avant filtrage")
+    basson_freqs, basson_amp, basson_phase, fundamental = prob.get_frequencies(signal, sample_rate, 32)
+    prob.plot_spectrum(signal, sample_rate, title="Spectre d'amplitude avant filtrage")
     basson_freqs_clean, basson_amp_clean, basson_phase_clean, fundamental_clean = prob.get_frequencies(filtered_signal, sample_rate, 32)
-    # prob.plot_spectrum(filtered_signal, sample_rate, title="Spectre d'amplitude apres filtrage")
+    prob.plot_spectrum(filtered_signal, sample_rate, title="Spectre d'amplitude apres filtrage")
 
     enveloppe = prob.get_envelope(order, signal)
     #plot_signal_with_envelope(enveloppe)
