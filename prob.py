@@ -1,11 +1,13 @@
 from scipy.io import wavfile
 import numpy as np
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, freqz
 from scipy.io.wavfile import write
 import matplotlib.pyplot as plt
 
 
-# Fonction pour lire un fichier audio .wav
+
+
+
 def read_file(filename):
     sample_rate, signal = wavfile.read(filename)
     signal_normalized = signal / np.max(np.abs(signal))
@@ -257,6 +259,25 @@ def plot_envelope(envelope, sample_rate, title="Enveloppe temporelle"):
     plt.legend()
     plt.show()
 
+def plot_frequency_response(N):
+    # Coefficients égaux pour le filtre FIR
+    fir_coefficients = np.ones(N) / N  # Chaque coefficient = 1/N
+
+    # Calcul de la réponse en fréquence du filtre
+    w, h = freqz(fir_coefficients, worN=8000)  # w = fréquence, h = réponse complexe
+
+    # Calculer l'amplitude en dB
+    h_dB = 20 * np.log10(abs(h) + 1e-10)  # Ajouter un epsilon pour éviter log(0)
+
+    # Tracer la réponse en fréquence (amplitude en dB)
+    plt.figure(figsize=(10, 6))
+    plt.plot(w / np.pi, h_dB, label="Réponse en fréquence en dB")
+    plt.title(f"Réponse en fréquence d'un filtre FIR d'ordre {N}")
+    plt.xlabel("Fréquence normalisée (×π rad/sample)")
+    plt.ylabel("Amplitude (dB)")
+    plt.grid(True)
+    plt.show()
+
 if __name__ == "__main__":
     # Code principal pour traiter un fichier et produire les résultats
     cutoff = np.pi / 1000
@@ -266,6 +287,7 @@ if __name__ == "__main__":
 
     # calcul de l enveloppe via un filtre fir
     N = get_fir_N(cutoff)
+    plot_frequency_response(N)
     envelope = get_envelope(N, signal)
     plot_envelope(envelope, sample_rate)
     # Extraire les parametre sinusoidaux
