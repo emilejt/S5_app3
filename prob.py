@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 # Fonction pour lire un fichier audio .wav
 def read_file(filename):
     sample_rate, signal = wavfile.read(filename)
-    return sample_rate, signal
+    signal_normalized = signal / np.max(np.abs(signal))
+    return sample_rate, signal_normalized
 
 
 # Appliquer une fenêtre de Hamming au signal pour minimiser les effets de fuite spectrale
@@ -81,7 +82,7 @@ def reproduce_signal(frequencies, amplitudes, phases, duration, sample_rate):
     reproduced_signal = np.zeros_like(t)
 
     for i in range(0, len(amplitudes)):
-        reproduced_signal += amplitudes[i - 1] * np.sin(2 * np.pi * frequencies[i] * t + phases[i - 1])
+        reproduced_signal += amplitudes[i] * np.sin(2 * np.pi * frequencies[i] * t + phases[i])
 
     return reproduced_signal
 
@@ -202,6 +203,7 @@ def create_silence(sampleRate, duration_s=1):
 
 def plot_spectrum(signal, sample_rate, title="Spectrum (en dB)", harmonics=None):
     # Appliquer la FFT pour obtenir le spectre de fréquence
+    signal = signal / np.max(np.abs(signal))
     fft_signal = np.fft.fft(signal)
     frequencies = np.fft.fftfreq(len(fft_signal), 1 / sample_rate)
 
@@ -268,7 +270,6 @@ if __name__ == "__main__":
     plot_envelope(envelope, sample_rate)
     # Extraire les parametre sinusoidaux
     sinus_freqs, sinus_amp, sinus_phases, fundamental = get_frequencies(windowed_signal, sample_rate, 32)
-    print(len(sinus_freqs))
     # Analyser le signal d'origine (avant synthèse)
     plot_spectrum(signal, sample_rate, title="Spectre du son analysé", harmonics=sinus_freqs[:32])
 
@@ -281,7 +282,7 @@ if __name__ == "__main__":
     # Appliquer l'enveloppe et sauvegarder le signal final
     final_signal = apply_envelope_to_signal(reproduced_signal, envelope)
     save_signal_to_wav(final_signal, sample_rate)
-
+    plot_spectrum(final_signal, sample_rate, title="Spectre du son synthétisé", harmonics=sinus_freqs[:32])
     # Générer les fréquences des notes pour Beethoven
     note_freqs = generate_note_frequencies(fundamental)
 
